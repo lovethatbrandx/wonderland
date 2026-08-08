@@ -11,7 +11,6 @@ import {
   Plus,
   X,
   Code,
-  Globe,
   Sun,
   Moon
 } from 'lucide-react';
@@ -311,16 +310,6 @@ export default function Sidebar({ view, setView, stories, onOpenStory, activeSto
             {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             {theme === 'dark' ? 'Light' : 'Dark'}
           </button>
-          <span className="w-px h-4 bg-[var(--color-border)]" />
-          <a 
-            href="https://github.com/lovethatbrandx" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-accent)] transition-colors"
-          >
-            <Globe className="w-4 h-4" />
-            Brand X
-          </a>
           <span className="w-px h-4 bg-[var(--color-border)]" />
           <a 
             href="https://github.com/lovethatbrandx" 
