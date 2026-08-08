@@ -1,0 +1,9 @@
+services:
+  wonderland:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: wonderland
+    ports:
+      - "5173:80"
+    restart: unless-stopped
