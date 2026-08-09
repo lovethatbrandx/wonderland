@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Key, 
@@ -59,6 +59,20 @@ export default function Settings({ onRefresh }) {
   const [showPromptForm, setShowPromptForm] = useState(false);
 
   const addedIds = new Set(settings.models.map(m => m.id));
+
+  const handleRefreshLmstudio = useCallback(async () => {
+    setLmstudioLoading(true);
+    setLmstudioError('');
+    try { setLmstudioModels(await fetchLmStudioModels(settings.lmstudioUrl || 'http://localhost:1234/v1')); }
+    catch (err) { setLmstudioError(err.message); }
+    finally { setLmstudioLoading(false); }
+  }, [settings.lmstudioUrl]);
+
+  useEffect(() => {
+    if (activeTab === 'lmstudio' && lmstudioModels.length === 0 && !lmstudioLoading) {
+      handleRefreshLmstudio();
+    }
+  }, [activeTab, lmstudioModels.length, lmstudioLoading, handleRefreshLmstudio]);
 
   async function handleSaveKey() {
     const key = apiKeyInput.trim();
@@ -124,14 +138,6 @@ export default function Settings({ onRefresh }) {
     try { setOllamaModels(await fetchOllamaModels(settings.ollamaUrl || 'http://localhost:11434')); }
     catch (err) { setOllamaError(err.message); }
     finally { setOllamaLoading(false); }
-  }
-
-  async function handleRefreshLmstudio() {
-    setLmstudioLoading(true);
-    setLmstudioError('');
-    try { setLmstudioModels(await fetchLmStudioModels(settings.lmstudioUrl || 'http://localhost:1234/v1')); }
-    catch (err) { setLmstudioError(err.message); }
-    finally { setLmstudioLoading(false); }
   }
 
   function handleAddModel(model, provider = 'openrouter') {

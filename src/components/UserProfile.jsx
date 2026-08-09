@@ -4,11 +4,11 @@ import { Edit3, Save, X, Feather, BookOpen, Palette, Tag, FileText, Sparkles, Pe
 import { getProfile, saveProfile } from '../store';
 
 const PROFILE_FIELDS = [
-  { key: 'name', label: 'Name', icon: PenTool, placeholder: 'Your name or pen name' },
-  { key: 'bio', label: 'Bio', icon: Feather, placeholder: 'Brief background about yourself as a writer...', multiline: true },
+  { key: 'name', label: 'Your Name', icon: PenTool, placeholder: 'Your name or pen name' },
+  { key: 'bio', label: 'About You', icon: Feather, placeholder: 'A bit about yourself — interests, background, what you enjoy in stories...', multiline: true },
   { key: 'writingStyle', label: 'Preferred Writing Style', icon: Palette, placeholder: 'e.g. Dark and atmospheric, lighthearted and whimsical, epic and grandiose...', multiline: true },
   { key: 'preferredGenres', label: 'Preferred Genres / Themes', icon: Tag, placeholder: 'e.g. High fantasy, political intrigue, coming-of-age' },
-  { key: 'backgroundNotes', label: 'Background Notes', icon: FileText, placeholder: 'Any additional context the AI should know about your world, characters, or preferences...', multiline: true },
+  { key: 'backgroundNotes', label: 'Notes for the AI', icon: FileText, placeholder: 'Any additional context the AI should know about your preferences, favorite tropes, or world details...', multiline: true },
 ];
 
 export default function UserProfile() {
@@ -25,8 +25,8 @@ export default function UserProfile() {
       <div className="max-w-4xl mx-auto px-8 py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold mb-2" style={{ fontFamily: 'var(--font-family-display)' }}>Author Profile</h1>
-            <p className="text-base text-[var(--color-text-secondary)]">Shape how the AI co-writes with you</p>
+            <h1 className="text-3xl font-bold mb-2" style={{ fontFamily: 'var(--font-family-display)' }}>Your Profile</h1>
+            <p className="text-base text-[var(--color-text-secondary)]">Tell the AI about yourself so it can personalize your stories</p>
           </div>
           {!editing && <button className="btn btn-primary text-sm px-6 py-3" onClick={() => { setEditing(true); setDraft({ ...profile }); }}><Edit3 className="w-5 h-5" /> Edit Profile</button>}
         </div>
@@ -89,7 +89,7 @@ export default function UserProfile() {
                     <BookOpen className="w-10 h-10 text-[var(--color-accent)]" />
                   </div>
                   <p className="text-xl text-[var(--color-text-secondary)] mb-3">No profile info yet</p>
-                  <p className="text-base text-[var(--color-text-muted)] mb-8">Tell the AI about yourself to get better co-writing</p>
+                  <p className="text-base text-[var(--color-text-muted)] mb-8">Add your preferences so the AI writes stories tailored to you</p>
                   <button className="btn btn-primary text-base px-6 py-3" onClick={() => { setEditing(true); setDraft({ ...profile }); }}><Edit3 className="w-5 h-5" /> Add Your Details</button>
                 </div>
               )}

@@ -17,7 +17,8 @@ import {
   ChevronDown,
   Download
 } from 'lucide-react';
-import { getStory, addStoryEntry, updateStoryTitle, getSettings, getPrompts, copyStoryAsBranch, getStories, saveItems, exportStory, downloadFile } from '../store';
+import { getStory, addStoryEntry, updateStoryTitle, getSettings, getPrompts, getProfile, copyStoryAsBranch, getStories, saveItems, exportStory, downloadFile } from '../store';
+import { buildSystemPrompt } from '../promptBuilder';
 import { chatCompletion as openRouterChat } from '../openrouter';
 import { chatCompletion as ollamaChat } from '../ollama';
 import { chatCompletion as lmstudioChat } from '../lmstudio';
@@ -105,23 +106,60 @@ export default function StoryEditor({ storyId, onBack, characters, onRefreshStor
     return 0;
   });
 
-  const activePromptName = activePromptId ? (prompts.find(p => p.id === activePromptId)?.name || 'Custom') : (settings.defaultPrompt ? (prompts.find(p => p.id === settings.defaultPrompt)?.name + ' (default)') || 'Default' : 'None');
-  const activeModelName = activeModel ? (allModels.find(m => m.id === activeModel)?.name || activeModel).split('/').pop() : (settings.defaultModel ? 'Default' : 'Select');
+  function getActivePromptName() {
+    if (activePromptId) {
+      return prompts.find(p => p.id === activePromptId)?.name || 'Custom';
+    }
+    if (settings.defaultPrompt) {
+      const defaultName = prompts.find(p => p.id === settings.defaultPrompt)?.name;
+      return defaultName ? `${defaultName} (default)` : 'Default';
+    }
+    return 'None';
+  }
 
-  const requestQueue = new Set();
+  function getActiveModelName() {
+    if (activeModel) {
+      const modelName = allModels.find(m => m.id === activeModel)?.name || activeModel;
+      return modelName.split('/').pop();
+    }
+    return settings.defaultModel ? 'Default' : 'Select';
+  }
+
+  const activePromptName = getActivePromptName();
+  const activeModelName = getActiveModelName();
+
+  const requestQueue = useRef(new Set());
   
   async function doLLMResponse(entriesToUse) {
-    if (requestQueue.has(storyId)) {
-      console.warn('[DO_LLM] Request already in progress');
+    if (requestQueue.current.has(storyId)) {
       return;
     }
-    requestQueue.add(storyId);
+    requestQueue.current.add(storyId);
     
     const modelData = allModels.find(m => m.id === activeModel);
     const provider = modelData?.provider || 'openrouter';
     const modelName = modelData?.name || activeModel;
+
+    // Scan user entries for @CharacterName mentions
+    const mentionedNames = new Set();
+    for (const entry of entriesToUse) {
+      if (entry.author === 'You') {
+        const matches = entry.text.matchAll(/@(\w[\w\s]*?)(?=\s|$|[.,!?;:])/g);
+        for (const match of matches) {
+          mentionedNames.add(match[1].trim());
+        }
+      }
+    }
+    const mentionedCharacters = [];
+    if (mentionedNames.size > 0 && characters) {
+      for (const char of characters) {
+        if (mentionedNames.has(char.name)) {
+          mentionedCharacters.push(char);
+        }
+      }
+    }
     
-    const systemPrompt = buildSystemPrompt();
+    const systemPrompt = buildSystemPrompt({ activePromptId, prompts, profile: getProfile(), characters: mentionedCharacters });
     const contextSummary = story?.contextSummaryGenerated || story?.contextSummary || null;
 
     const messages = [
@@ -163,7 +201,6 @@ export default function StoryEditor({ storyId, onBack, characters, onRefreshStor
         onRefreshStories();
       }
     } catch (err) {
-      console.error('[DO_LLM] ERROR:', err);
       addStoryEntry(storyId, `[Error: ${err.message}]`, 'System');
       const updatedStory = getStory(storyId);
       setStory(updatedStory);
@@ -171,7 +208,7 @@ export default function StoryEditor({ storyId, onBack, characters, onRefreshStor
     } finally {
       setStreaming(false);
       setStreamText('');
-      requestQueue.delete(storyId);
+      requestQueue.current.delete(storyId);
     }
   }
 
@@ -269,15 +306,6 @@ export default function StoryEditor({ storyId, onBack, characters, onRefreshStor
       onRefreshStories();
     }
     setEditingTitle(false);
-  }
-
-  function buildSystemPrompt() {
-    let prompt = '';
-    if (activePromptId) {
-      const p = prompts.find(pr => pr.id === activePromptId);
-      if (p) prompt = p.content;
-    }
-    return prompt;
   }
 
   function insertCharacter(name) {
@@ -683,9 +711,10 @@ export default function StoryEditor({ storyId, onBack, characters, onRefreshStor
                   className="btn btn-secondary text-sm px-4 py-3"
                   onClick={handleContinue}
                   disabled={streaming}
+                  title="Continue story"
                 >
-                  <Sparkles className="w-4 h-4" />
-                  {streaming ? '...' : 'AI'}
+                  <Play className="w-4 h-4" />
+                  {streaming ? '...' : 'Continue'}
                 </button>
               );
             })()}

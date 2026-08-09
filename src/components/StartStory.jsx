@@ -13,10 +13,11 @@ import {
   Search,
   Download
 } from 'lucide-react';
-import { createStory, deleteStory, importStory, importChatJson, getFolders, getStoriesInFolder, getRootStories, getPrompts, getCharacters, getSettings, addStoryEntry, getStory, updateStory, emitStoryUpdated, exportAllStories, downloadFile } from '../store';
+import { createStory, deleteStory, importStory, importChatJson, getFolders, getStoriesInFolder, getRootStories, getPrompts, getCharacters, getSettings, getProfile, addStoryEntry, getStory, updateStory, emitStoryUpdated, exportAllStories, downloadFile } from '../store';
 import { chatCompletion as openRouterChat } from '../openrouter';
 import { chatCompletion as ollamaChat } from '../ollama';
 import { chatCompletion as lmstudioChat } from '../lmstudio';
+import { buildSystemPrompt } from '../promptBuilder';
 
 export default function StartStory({ onRefresh, onOpenStory, onCreateAndOpen }) {
   const [showImport, setShowImport] = useState(false);
@@ -108,7 +109,13 @@ export default function StartStory({ onRefresh, onOpenStory, onCreateAndOpen }) 
       const provider = modelData?.provider || 'openrouter';
       const modelName = modelData?.name || selectedModel;
 
-      const systemPrompt = buildSystemPrompt(selectedPrompt, selectedCharacter);
+      const selectedCharObj = selectedCharacter ? characters.find(c => c.id === selectedCharacter) : null;
+      const systemPrompt = buildSystemPrompt({
+        activePromptId: selectedPrompt,
+        prompts,
+        profile: getProfile(),
+        characters: selectedCharObj ? [selectedCharObj] : [],
+      });
       const storyData = getStory(story.id);
       const entries = storyData?.entries || [];
 
@@ -121,22 +128,18 @@ export default function StartStory({ onRefresh, onOpenStory, onCreateAndOpen }) 
       ];
 
       let aiResponse = '';
-      try {
-        if (provider === 'ollama') {
-          await ollamaChat(settings.ollamaUrl, selectedModel, messages, (text) => {
-            aiResponse = text;
-          }, null);
-        } else if (provider === 'lmstudio') {
-          await lmstudioChat(settings.lmstudioUrl, selectedModel, messages, (text) => {
-            aiResponse = text;
-          }, null);
-        } else {
-          await openRouterChat(settings.apiKey, selectedModel, messages, (text) => {
-            aiResponse = text;
-          }, null);
-        }
-      } catch (err) {
-        console.error('[START] AI error:', err);
+      if (provider === 'ollama') {
+        await ollamaChat(settings.ollamaUrl, selectedModel, messages, (text) => {
+          aiResponse = text;
+        }, null);
+      } else if (provider === 'lmstudio') {
+        await lmstudioChat(settings.lmstudioUrl, selectedModel, messages, (text) => {
+          aiResponse = text;
+        }, null);
+      } else {
+        await openRouterChat(settings.apiKey, selectedModel, messages, (text) => {
+          aiResponse = text;
+        }, null);
       }
 
       if (aiResponse && aiResponse.trim()) {
@@ -151,42 +154,10 @@ export default function StartStory({ onRefresh, onOpenStory, onCreateAndOpen }) 
 
       onRefresh();
     } catch (err) {
-      console.error('[START] Error:', err);
       alert('Failed to start story: ' + err.message);
     } finally {
       setIsStarting(false);
     }
-  }
-
-  function buildSystemPrompt(promptId, characterId) {
-    let basePrompt = '';
-    if (promptId) {
-      const prompt = prompts.find(p => p.id === promptId);
-      if (prompt) basePrompt = prompt.content;
-    }
-
-    let characterContext = '';
-    if (characterId) {
-      const character = characters.find(c => c.id === characterId);
-      if (character) {
-        characterContext = `\n\n[Character: ${character.name}]\n`;
-        if (character.description) {
-          characterContext += `Description: ${character.description}\n`;
-        }
-        if (character.traits) {
-          characterContext += `Personality: ${character.traits}\n`;
-        }
-        if (character.knowledgeManual) {
-          characterContext += `Background: ${character.knowledgeManual}\n`;
-        }
-        if (character.aliases && character.aliases.length > 0) {
-          characterContext += `Known as: ${character.aliases.join(', ')}\n`;
-        }
-        characterContext += '[/Character]\n';
-      }
-    }
-
-    return basePrompt + characterContext;
   }
 
   function handleDelete(id, e) {
